@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="ETW Demo" Height="400" Width="600">
     <Grid>
-        <ListBox x:Name="listBoxEvents" Margin="10"/>
+        <ListBox x:Name="listBoxEvents" Margin="10"
+                 VirtualizingStackPanel.IsVirtualizing="True"
+                 VirtualizingStackPanel.VirtualizationMode="Recycling"/>
     </Grid>
 </Window>
