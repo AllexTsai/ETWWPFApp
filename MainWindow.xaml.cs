@@ -90,7 +90,10 @@ namespace WpfEtwDemo
                             session.StopOnDispose = true;
 
                             // 啟用 kernel process provider
-                            session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process);
+                            session.EnableKernelProvider(
+                                KernelTraceEventParser.Keywords.Process |
+                                KernelTraceEventParser.Keywords.Thread |
+                                KernelTraceEventParser.Keywords.ImageLoad);
 
                             session.Source.Kernel.ProcessStart += data =>
                             {
@@ -105,6 +108,30 @@ namespace WpfEtwDemo
                                 string timestamp = DateTime.Now.ToString("HH:mm:ss");
                                 string message = $"[{timestamp}] STOP: {data.ProcessName} (PID={data.ProcessID})";
                                 _eventQueue.Enqueue((message, Brushes.Red));
+                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
+                            };
+
+                            session.Source.Kernel.ThreadStart += data =>
+                            {
+                                string timestamp = DateTime.Now.ToString("HH:mm:ss");
+                                string message = $"[{timestamp}] THREAD START: PID={data.ProcessID}, TID={data.ThreadID}";
+                                _eventQueue.Enqueue((message, Brushes.Blue));
+                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
+                            };
+                            
+                            session.Source.Kernel.ThreadStop += data =>
+                            {
+                                string timestamp = DateTime.Now.ToString("HH:mm:ss");
+                                string message = $"[{timestamp}] THREAD STOP: PID={data.ProcessID}, TID={data.ThreadID}";
+                                _eventQueue.Enqueue((message, Brushes.Purple));
+                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
+                            };
+                            
+                            session.Source.Kernel.ImageLoad += data =>
+                            {
+                                string timestamp = DateTime.Now.ToString("HH:mm:ss");
+                                string message = $"[{timestamp}] IMAGE LOAD: {data.FileName} (PID={data.ProcessID}, BaseAddr=0x{data.ImageBase:x})";
+                                _eventQueue.Enqueue((message, Brushes.DarkOrange));
                                 Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
@@ -224,7 +251,7 @@ namespace WpfEtwDemo
                         kernel.ProcessStart += data =>
                         {
                             string timestamp = data.TimeStamp.ToString("HH:mm:ss");
-                            string message = $"[{timestamp}] START: {data.ProcessName} (PID={data.ProcessID})";
+                            string message = $"[{timestamp}] START: {data.ProcessName} (PID={data.ProcessID}, TID={data.ThreadID})";
                             _eventQueue.Enqueue((message, Brushes.Green));
                             Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
@@ -232,8 +259,32 @@ namespace WpfEtwDemo
                         kernel.ProcessStop += data =>
                         {
                             string timestamp = data.TimeStamp.ToString("HH:mm:ss");
-                            string message = $"[{timestamp}] STOP: {data.ProcessName} (PID={data.ProcessID})";
+                            string message = $"[{timestamp}] STOP: {data.ProcessName} (PID={data.ProcessID}, TID={data.ThreadID})";
                             _eventQueue.Enqueue((message, Brushes.Red));
+                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
+                        };
+
+                        kernel.ThreadStart += data =>
+                        {
+                            string timestamp = data.TimeStamp.ToString("HH:mm:ss");
+                            string message = $"[{timestamp}] THREAD START: PID={data.ProcessID}, TID={data.ThreadID}";
+                            _eventQueue.Enqueue((message, Brushes.Blue));
+                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
+                        };
+                        
+                        kernel.ThreadStop += data =>
+                        {
+                            string timestamp = data.TimeStamp.ToString("HH:mm:ss");
+                            string message = $"[{timestamp}] THREAD STOP: PID={data.ProcessID}, TID={data.ThreadID}";
+                            _eventQueue.Enqueue((message, Brushes.Purple));
+                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
+                        };
+                        
+                        kernel.ImageLoad += data =>
+                        {
+                            string timestamp = data.TimeStamp.ToString("HH:mm:ss");
+                            string message = $"[{timestamp}] IMAGE LOAD: {data.FileName} (PID={data.ProcessID}, BaseAddr=0x{data.ImageBase:x})";
+                            _eventQueue.Enqueue((message, Brushes.DarkOrange));
                             Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
 
