@@ -16,7 +16,6 @@ ETWWPFApp 是一個基於 WPF 的學習範例，展示如何透過 **Event Traci
   - ProcessStart/Stop（PID + ProcessName）
   - ThreadStart/Stop（PID + TID）
   - ImageLoad（模組名稱 + Base Address）
-- **Target PID 過濾**：使用者可輸入 PID，只顯示特定行程的事件。
 - **UI 效能優化策略**（詳見下方）。
 
 ---
@@ -30,11 +29,7 @@ ETWWPFApp 是一個基於 WPF 的學習範例，展示如何透過 **Event Traci
 2. **ETL 模式**  
    - 選擇「From ETL」模式並點擊「Open ETL」。  
    - 選擇 PerfView 產生的 `.etl` 檔案。  
-   - 程式會解析檔案並顯示事件。  
-
-3. **Target PID 過濾**  
-   - 在 UI 輸入框輸入 PID。  
-   - 程式只顯示該行程的事件，避免全系統事件量造成卡頓。  
+   - 程式會解析檔案並顯示事件。   
 
 ---
 
@@ -56,13 +51,8 @@ ETWWPFApp 是一個基於 WPF 的學習範例，展示如何透過 **Event Traci
 
 ---
 
-## 📸 範例截圖（可選）
-- Live Session 畫面  
-- ETL 檔案解析結果  
-
----
-
 ## 📌 未來改進方向
+- Target PID 過濾**：使用者可輸入 PID，只顯示特定行程的事件。
 - 增加更多 ETW provider（例如 CLR GC、CPU sample）。  
 - 將事件寫入檔案，提供分析報告。  
 - UI 優化（虛擬化、搜尋、過濾）。  
