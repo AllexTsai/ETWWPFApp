@@ -9,7 +9,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 模式選擇 -->
+        <!-- Mode Selection -->
         <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8" VerticalAlignment="Center">
             <TextBlock Text="Mode:" VerticalAlignment="Center" Margin="0,0,8,0"/>
             <ComboBox x:Name="comboMode" Width="140" SelectedIndex="0">
@@ -17,21 +17,21 @@
                 <ComboBoxItem Content="From ETL"/>
             </ComboBox>
 
-            <!-- Live 控制 -->
+            <!-- Live control -->
             <Button x:Name="btnStartLive" Content="Start Live" Width="100" Margin="12,0,4,0" Click="BtnStartLive_Click"/>
             <Button x:Name="btnStopLive" Content="Stop Live" Width="100" Margin="4,0,4,0" Click="BtnStopLive_Click" IsEnabled="False"/>
 
-            <!-- ETL 控制 -->
+            <!-- ETL control -->
             <Button x:Name="btnOpenEtl" Content="Open ETL" Width="100" Margin="12,0,4,0" Click="BtnOpenEtl_Click"/>
             <Button x:Name="btnStopEtl" Content="Stop ETL" Width="100" Margin="4,0,4,0" Click="BtnStopEtl_Click" IsEnabled="False"/>
 
             <TextBlock x:Name="txtStatus" VerticalAlignment="Center" Margin="12,0,0,0" Text="Ready"/>
         </StackPanel>
 
-        <!-- 額外說明 -->
+        <!-- Additional notes -->
         <TextBlock Grid.Row="1" Text="注意：Live 模式需以管理員執行；請勿同時啟動 Live 與 ETL 讀取。" Foreground="Gray" FontSize="12" Margin="0,0,0,8"/>
 
-        <!-- 事件顯示 -->
+        <!-- Event -->
         <ListBox x:Name="listBoxEvents" Grid.Row="2"
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling"/>

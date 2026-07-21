@@ -14,18 +14,18 @@ namespace WpfEtwDemo
 {
     public partial class MainWindow : Window
     {
-        // Queue 存純資料（字串 + 顏色）
+        // Queue save data（message + color）
         private readonly ConcurrentQueue<(string Message, Brush Color)> _eventQueue = new();
 
-        // Live session 相關
+        // Live session
         private TraceEventSession? _liveSession;
         private Task? _liveTask;
 
-        // ETL 讀取相關
+        // ETL
         private Task? _etlTask;
         private CancellationTokenSource? _etlCts;
 
-        // 狀態旗標
+        // State flag
         private volatile bool _isLiveRunning = false;
         private volatile bool _isEtlRunning = false;
 
@@ -36,7 +36,7 @@ namespace WpfEtwDemo
             UpdateUiState();
         }
 
-        // 切換模式時更新 UI 可用按鈕
+        // Update UI when switching modes
         private void ComboMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             UpdateUiState();
@@ -77,7 +77,7 @@ namespace WpfEtwDemo
 
             try
             {
-                // 建立唯一名稱以避免衝突（若需要固定名稱可改回固定字串）
+                //Establish a unique name to avoid conflicts
                 string sessionName = "WpfEtwDemoLive_" + Guid.NewGuid();
 
                 _liveTask = Task.Run(() =>
@@ -89,7 +89,7 @@ namespace WpfEtwDemo
                             _liveSession = session;
                             session.StopOnDispose = true;
 
-                            // 啟用 kernel process provider
+                            // Enable kernel process provider
                             session.EnableKernelProvider(
                                 KernelTraceEventParser.Keywords.Process |
                                 KernelTraceEventParser.Keywords.Thread |
@@ -135,7 +135,7 @@ namespace WpfEtwDemo
                                 Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
-                            // 更新狀態
+                            // Update UI
                             Dispatcher.BeginInvoke(new Action(() =>
                             {
                                 _isLiveRunning = true;
@@ -143,7 +143,7 @@ namespace WpfEtwDemo
                                 UpdateUiState();
                             }));
 
-                            // 這會阻塞直到 session 結束或被 Dispose
+                            // This will block until the session ends or is disposed of.
                             session.Source.Process();
                         }
                     }
@@ -156,7 +156,7 @@ namespace WpfEtwDemo
                     }
                     finally
                     {
-                        // 清理與狀態回復
+                        // Cleanup and status restore
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
                             _isLiveRunning = false;
@@ -182,7 +182,7 @@ namespace WpfEtwDemo
 
             try
             {
-                // Dispose session 會讓 session.Source.Process() 返回
+                // Disposing of a session will cause session.Source.Process() to return a value.
                 _liveSession?.Dispose();
                 _liveSession = null;
                 txtStatus.Text = "Stopping live session...";
@@ -243,7 +243,7 @@ namespace WpfEtwDemo
                         UpdateUiState();
                     }));
 
-                    // 根據 TraceEvent 版本，這裡使用 ETWTraceEventSource
+                    // Use ETWTraceEventSource
                     using (var source = new ETWTraceEventSource(etlPath))
                     {
                         var kernel = new KernelTraceEventParser(source);
@@ -288,7 +288,7 @@ namespace WpfEtwDemo
                             Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
 
-                        // 同步處理 ETL，直到結束或取消
+                        // Synchronous processing of ETL until completion or cancellation
                         source.Process();
                     }
 
@@ -325,8 +325,8 @@ namespace WpfEtwDemo
             try
             {
                 _etlCts?.Cancel();
-                // ETWTraceEventSource 的 Process() 是同步的，Cancel 可能無法立即中斷，
-                // 若需要更強的中斷，可考慮使用 ETLX 或外部控制流程。
+                // The Process() method of ETWTraceEventSource is synchronous, and Cancel may not interrupt immediately.
+                // If a stronger interrupt is required, consider using ETLX or an external control flow.
                 txtStatus.Text = "Stopping ETL read...";
                 UpdateUiState();
             }
@@ -338,9 +338,9 @@ namespace WpfEtwDemo
 
         #endregion
 
-        #region Queue 處理
+        #region Queue
 
-        // 在 UI thread 執行，建立 ListBoxItem 並顯示
+        // Execute on the UI thread, create a ListBoxItem and display it.
         private void ProcessQueue()
         {
             while (_eventQueue.TryDequeue(out var evt))
@@ -357,7 +357,7 @@ namespace WpfEtwDemo
 
         #endregion
 
-        // 視窗關閉時確保清理
+        // Make sure to clean up when the window is closed.
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
