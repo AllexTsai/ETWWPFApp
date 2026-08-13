@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
@@ -98,16 +100,43 @@ namespace WpfEtwDemo
                             session.Source.Kernel.ProcessStart += data =>
                             {
                                 string timestamp = DateTime.Now.ToString("HH:mm:ss");
-                                string message = $"[{timestamp}] START: {data.ProcessName} (PID={data.ProcessID})";
-                                _eventQueue.Enqueue((message, Brushes.Green));
+                                string processName = data.ProcessName;
+                                
+                                //Precisely capture the "IPC intelligent linkage process" we just designed.
+                                if (processName.Contains("WmiQueryTool", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string message = $"🔥 [{timestamp}] 【AI 智慧聯動】Ollama 成功驅動 WmiQueryTool 啟動！(PID={data.ProcessID})";
+                                    _eventQueue.Enqueue((message, Brushes.Magenta));
+                                }
+                                else if (processName.Contains("ollama", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string message = $"🚀 [{timestamp}] 【地端模型載入】Ollama 推理進程啟動 (PID={data.ProcessID})";
+                                    _eventQueue.Enqueue((message, Brushes.Crimson));
+                                }
+                                else
+                                {
+                                    // Regular system background events maintain your original logic.
+                                    string message = $"[{timestamp}] START: {processName} (PID={data.ProcessID})";
+                                    _eventQueue.Enqueue((message, Brushes.Green));
+                                }
                                 Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
                             session.Source.Kernel.ProcessStop += data =>
                             {
                                 string timestamp = DateTime.Now.ToString("HH:mm:ss");
-                                string message = $"[{timestamp}] STOP: {data.ProcessName} (PID={data.ProcessID})";
-                                _eventQueue.Enqueue((message, Brushes.Red));
+                                string processName = data.ProcessName;
+
+                                if (processName.Contains("WmiQueryTool", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string message = $"🏁 [{timestamp}] 【IPC 乾淨收尾】WmiQueryTool 執行 WMI 成功，進程已安全釋放。";
+                                    _eventQueue.Enqueue((message, Brushes.DarkCyan));
+                                }
+                                else
+                                {
+                                    string message = $"[{timestamp}] STOP: {processName} (PID={data.ProcessID})";
+                                    _eventQueue.Enqueue((message, Brushes.Red));
+                                }
                                 Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
@@ -130,8 +159,23 @@ namespace WpfEtwDemo
                             session.Source.Kernel.ImageLoad += data =>
                             {
                                 string timestamp = DateTime.Now.ToString("HH:mm:ss");
-                                string message = $"[{timestamp}] IMAGE LOAD: {data.FileName} (PID={data.ProcessID}, BaseAddr=0x{data.ImageBase:x})";
-                                _eventQueue.Enqueue((message, Brushes.DarkOrange));
+                                // Observe whether the ground-side inference module loads the Windows core color management library (such as mscms.dll / icm). 
+                                // Alternatively, Ollama can load GPU computing libraries (such as nvcuda.dll / opencl.dll).
+                                string fileName = data.FileName;
+                                bool isAiTarget = fileName.Contains("mscms", StringComparison.OrdinalIgnoreCase) || 
+                                                 fileName.Contains("cuda", StringComparison.OrdinalIgnoreCase) ||
+                                                 fileName.Contains("WmiQueryTool", StringComparison.OrdinalIgnoreCase);
+
+                                if (isAiTarget)
+                                {
+                                    string message = $"⚡ [{timestamp}] 【AI 核心模組載入】IMAGE LOAD: {Path.GetFileName(fileName)} (PID={data.ProcessID}, BaseAddr=0x{data.ImageBase:x})";
+                                    _eventQueue.Enqueue((message, Brushes.Gold));
+                                }
+                                else
+                                {
+                                    string message = $"[{timestamp}] IMAGE LOAD: {fileName} (PID={data.ProcessID}, BaseAddr=0x{data.ImageBase:x})";
+                                    _eventQueue.Enqueue((message, Brushes.DarkOrange));
+                                }
                                 Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
