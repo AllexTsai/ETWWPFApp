@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -18,6 +19,14 @@ namespace WpfEtwDemo
     {
         // Queue save data（message + color）
         private readonly ConcurrentQueue<(string Message, Brush Color)> _eventQueue = new();
+
+        // Batches queued events into the UI on a fixed interval instead of
+        // dispatching once per ETW event, which floods the UI thread under
+        // high-frequency providers like ThreadStart/Stop.
+        private readonly DispatcherTimer _uiTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+
+        // Upper bound for listBoxEvents so long-running sessions don't grow it unbounded.
+        private const int MaxDisplayedEvents = 2000;
 
         // Live session
         private TraceEventSession? _liveSession;
@@ -35,6 +44,7 @@ namespace WpfEtwDemo
         {
             InitializeComponent();
             comboMode.SelectionChanged += ComboMode_SelectionChanged;
+            _uiTimer.Tick += (s, e) => ProcessQueue();
             UpdateUiState();
         }
 
@@ -119,7 +129,6 @@ namespace WpfEtwDemo
                                     string message = $"[{timestamp}] START: {processName} (PID={data.ProcessID})";
                                     _eventQueue.Enqueue((message, Brushes.Green));
                                 }
-                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
                             session.Source.Kernel.ProcessStop += data =>
@@ -137,7 +146,6 @@ namespace WpfEtwDemo
                                     string message = $"[{timestamp}] STOP: {processName} (PID={data.ProcessID})";
                                     _eventQueue.Enqueue((message, Brushes.Red));
                                 }
-                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
                             session.Source.Kernel.ThreadStart += data =>
@@ -145,7 +153,6 @@ namespace WpfEtwDemo
                                 string timestamp = DateTime.Now.ToString("HH:mm:ss");
                                 string message = $"[{timestamp}] THREAD START: PID={data.ProcessID}, TID={data.ThreadID}";
                                 _eventQueue.Enqueue((message, Brushes.Blue));
-                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
                             
                             session.Source.Kernel.ThreadStop += data =>
@@ -153,7 +160,6 @@ namespace WpfEtwDemo
                                 string timestamp = DateTime.Now.ToString("HH:mm:ss");
                                 string message = $"[{timestamp}] THREAD STOP: PID={data.ProcessID}, TID={data.ThreadID}";
                                 _eventQueue.Enqueue((message, Brushes.Purple));
-                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
                             
                             session.Source.Kernel.ImageLoad += data =>
@@ -176,7 +182,6 @@ namespace WpfEtwDemo
                                     string message = $"[{timestamp}] IMAGE LOAD: {fileName} (PID={data.ProcessID}, BaseAddr=0x{data.ImageBase:x})";
                                     _eventQueue.Enqueue((message, Brushes.DarkOrange));
                                 }
-                                Dispatcher.BeginInvoke(new Action(ProcessQueue));
                             };
 
                             // Update UI
@@ -184,6 +189,7 @@ namespace WpfEtwDemo
                             {
                                 _isLiveRunning = true;
                                 txtStatus.Text = "Live session running";
+                                _uiTimer.Start();
                                 UpdateUiState();
                             }));
 
@@ -206,6 +212,8 @@ namespace WpfEtwDemo
                             _isLiveRunning = false;
                             _liveSession = null;
                             txtStatus.Text = "Live session stopped";
+                            ProcessQueue();
+                            _uiTimer.Stop();
                             UpdateUiState();
                         }));
                     }
@@ -260,6 +268,7 @@ namespace WpfEtwDemo
             {
                 string path = dlg.FileName;
                 listBoxEvents.Items.Clear();
+                txtEventCount.Text = "Events: 0 | Pending: 0";
                 StartReadingEtl(path);
             }
         }
@@ -284,6 +293,7 @@ namespace WpfEtwDemo
                     {
                         _isEtlRunning = true;
                         txtStatus.Text = $"Reading ETL: {System.IO.Path.GetFileName(etlPath)}";
+                        _uiTimer.Start();
                         UpdateUiState();
                     }));
 
@@ -297,7 +307,6 @@ namespace WpfEtwDemo
                             string timestamp = data.TimeStamp.ToString("HH:mm:ss");
                             string message = $"[{timestamp}] START: {data.ProcessName} (PID={data.ProcessID}, TID={data.ThreadID})";
                             _eventQueue.Enqueue((message, Brushes.Green));
-                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
 
                         kernel.ProcessStop += data =>
@@ -305,7 +314,6 @@ namespace WpfEtwDemo
                             string timestamp = data.TimeStamp.ToString("HH:mm:ss");
                             string message = $"[{timestamp}] STOP: {data.ProcessName} (PID={data.ProcessID}, TID={data.ThreadID})";
                             _eventQueue.Enqueue((message, Brushes.Red));
-                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
 
                         kernel.ThreadStart += data =>
@@ -313,7 +321,6 @@ namespace WpfEtwDemo
                             string timestamp = data.TimeStamp.ToString("HH:mm:ss");
                             string message = $"[{timestamp}] THREAD START: PID={data.ProcessID}, TID={data.ThreadID}";
                             _eventQueue.Enqueue((message, Brushes.Blue));
-                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
                         
                         kernel.ThreadStop += data =>
@@ -321,7 +328,6 @@ namespace WpfEtwDemo
                             string timestamp = data.TimeStamp.ToString("HH:mm:ss");
                             string message = $"[{timestamp}] THREAD STOP: PID={data.ProcessID}, TID={data.ThreadID}";
                             _eventQueue.Enqueue((message, Brushes.Purple));
-                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
                         
                         kernel.ImageLoad += data =>
@@ -329,7 +335,6 @@ namespace WpfEtwDemo
                             string timestamp = data.TimeStamp.ToString("HH:mm:ss");
                             string message = $"[{timestamp}] IMAGE LOAD: {data.FileName} (PID={data.ProcessID}, BaseAddr=0x{data.ImageBase:x})";
                             _eventQueue.Enqueue((message, Brushes.DarkOrange));
-                            Dispatcher.BeginInvoke(new Action(ProcessQueue));
                         };
 
                         // Synchronous processing of ETL until completion or cancellation
@@ -356,6 +361,8 @@ namespace WpfEtwDemo
                         _isEtlRunning = false;
                         _etlCts?.Dispose();
                         _etlCts = null;
+                        ProcessQueue();
+                        _uiTimer.Stop();
                         UpdateUiState();
                     }));
                 }
@@ -384,19 +391,32 @@ namespace WpfEtwDemo
 
         #region Queue
 
-        // Execute on the UI thread, create a ListBoxItem and display it.
+        // Executed on the UI thread by _uiTimer: batch-drains the queue and
+        // updates the ListBox once per tick instead of once per ETW event.
         private void ProcessQueue()
         {
+            ListBoxItem? lastItem = null;
+
             while (_eventQueue.TryDequeue(out var evt))
             {
-                var item = new ListBoxItem
+                lastItem = new ListBoxItem
                 {
                     Content = evt.Message,
                     Foreground = evt.Color
                 };
-                listBoxEvents.Items.Add(item);
-                listBoxEvents.ScrollIntoView(item);
+                listBoxEvents.Items.Add(lastItem);
             }
+
+            if (lastItem == null) return;
+
+            // Keep listBoxEvents as a fixed-size ring buffer so long-running sessions don't grow it unbounded.
+            while (listBoxEvents.Items.Count > MaxDisplayedEvents)
+            {
+                listBoxEvents.Items.RemoveAt(0);
+            }
+
+            txtEventCount.Text = $"Events: {listBoxEvents.Items.Count} | Pending: {_eventQueue.Count}";
+            listBoxEvents.ScrollIntoView(lastItem);
         }
 
         #endregion
@@ -410,6 +430,7 @@ namespace WpfEtwDemo
             {
                 StopLiveSession();
                 StopReadingEtl();
+                _uiTimer.Stop();
             }
             catch { }
         }

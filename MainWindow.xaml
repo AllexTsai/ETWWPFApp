@@ -29,7 +29,10 @@
         </StackPanel>
 
         <!-- Additional notes -->
-        <TextBlock Grid.Row="1" Text="注意：Live 模式需以管理員執行；請勿同時啟動 Live 與 ETL 讀取。" Foreground="Gray" FontSize="12" Margin="0,0,0,8"/>
+        <DockPanel Grid.Row="1" Margin="0,0,0,8">
+            <TextBlock x:Name="txtEventCount" DockPanel.Dock="Right" Text="Events: 0 | Pending: 0" Foreground="Gray" FontSize="12"/>
+            <TextBlock Text="注意：Live 模式需以管理員執行；請勿同時啟動 Live 與 ETL 讀取。" Foreground="Gray" FontSize="12"/>
+        </DockPanel>
 
         <!-- Event -->
         <ListBox x:Name="listBoxEvents" Grid.Row="2"
