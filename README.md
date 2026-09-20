@@ -36,9 +36,8 @@
 Handling kernel-level ETW telemetry exposes the application to massive data throughput (especially with high-frequency events like `ThreadStart/Stop` and `ImageLoad`), which can easily bottleneck the UI thread. This project implements the following engineering strategies to achieve lag-free rendering:
 
 - **Asynchronous Decoupling Architecture**: Utilizes a `ConcurrentQueue<T>` data pipeline to decouple the intensive background ETW consumer thread from the foreground UI rendering loop.
-- **UI Dispatcher Throttling**: Implements optimized `Dispatcher` scheduling to batch UI updates, ensuring the application remains highly responsive during extreme kernel traffic.
-- **Telemetry Filtering (Target PID)**: Minimizes data bloat by allowing users to scope monitoring down to a specific Target PID, reducing memory and processing overhead.
-- **Volatile Ring Buffering**: Limits the maximum capacity of the data visualizer (ListBox) to recent *N* events, preventing unbounded memory growth and memory-leak-like UI stutter.
+- **UI Dispatcher Throttling**: Replaced the original per-event `Dispatcher.BeginInvoke` calls (one dispatch per ETW callback) with a single `DispatcherTimer` ticking every 100ms. The timer batch-drains whatever has accumulated in `_eventQueue` since the last tick and applies it to the UI in one pass — no matter how many events arrive within that 100ms window, only one UI update is triggered.
+- **Volatile Ring Buffering**: Caps the data visualizer (ListBox) at **2,000** displayed events. Once the limit is exceeded, the oldest items are evicted first (`Items.RemoveAt(0)`), keeping the visible log a fixed-size rolling window instead of growing unbounded. Validated across two independent test passes: a scripted batch of 150 rapid process start/stop cycles, and a ~15-minute idle background-noise soak test — in both, `Items.Count` plateaued at exactly 2,000 and did not continue climbing. Managed-heap size was also measured via `GC.GetTotalMemory(true)` (forcing a full collection before each sample) over a 13+ minute observation window; the value oscillated stably in the ~10–15MB range with repeated GC events pulling it back down, confirming the evicted `ListBoxItem`/string/tuple instances are not being reference-leaked.
 - **Latency Tolerant Design**: Accommodates the inherent 0.5–2 second buffering latency of the native ETW infrastructure while ensuring event processing completeness.
 
 ---
@@ -55,3 +54,4 @@ Handling kernel-level ETW telemetry exposes the application to massive data thro
 - [ ] **Advanced Provider Integration**: Expand telemetry sources to include CLR GC activities, Network I/O, and CPU Kernel Sampling.
 - [ ] **Automated Report Generation**: Dump filtered telemetry metrics into structured formats (CSV/JSON) for offline offensive/defensive analysis.
 - [ ] **Advanced UI Virtualization**: Transition dashboard rendering to full Virtualizing StackPanels to support continuous, infinite log streaming.
+- [ ] **Telemetry Filtering (Target PID)**: Not yet implemented. Idea: let users scope monitoring down to a specific Target PID to reduce data bloat and processing overhead.
