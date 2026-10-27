@@ -1,7 +1,7 @@
 # ETWWPFApp
 
 ## 📖 Project Overview
-`ETWWPFApp` is a high-performance WPF application demonstrating how to consume **Event Tracing for Windows (ETW)** to capture and analyze system-level telemetry. Built with `.NET 10`, this application showcases practical implementations of both real-time monitoring (**Live Sessions**) and post-incident forensics via **ETL file parsing**, specializing in tracing process lifecycle, thread behavior, and dynamic image/DLL loading events.
+`ETWWPFApp` is a WPF application demonstrating how to consume **Event Tracing for Windows (ETW)** to capture and analyze system-level telemetry. Built with `.NET 10`, this application showcases practical implementations of both real-time monitoring (**Live Sessions**) and post-incident forensics via **ETL file parsing**, specializing in tracing process lifecycle, thread behavior, and dynamic image/DLL loading events.
 
 - **Target Framework**: `.NET 10.0`
 - **Core Technology**: `Microsoft.Diagnostics.Tracing.TraceEvent`
@@ -33,7 +33,7 @@
 ---
 
 ## ⚖️ High-Throughput Performance Optimization
-Handling kernel-level ETW telemetry exposes the application to massive data throughput (especially with high-frequency events like `ThreadStart/Stop` and `ImageLoad`), which can easily bottleneck the UI thread. This project implements the following engineering strategies to achieve lag-free rendering:
+Handling kernel-level ETW telemetry exposes the application to massive data throughput (especially with high-frequency events like `ThreadStart/Stop` and `ImageLoad`), which can easily bottleneck the UI thread. This project implements the following engineering strategies to reduce the load on the UI thread:
 
 - **Asynchronous Decoupling Architecture**: Utilizes a `ConcurrentQueue<T>` data pipeline to decouple the intensive background ETW consumer thread from the foreground UI rendering loop.
 - **UI Dispatcher Throttling**: Replaced the original per-event `Dispatcher.BeginInvoke` calls (one dispatch per ETW callback) with a single `DispatcherTimer` ticking every 100ms. The timer batch-drains whatever has accumulated in `_eventQueue` since the last tick and applies it to the UI in one pass — no matter how many events arrive within that 100ms window, only one UI update is triggered.
