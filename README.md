@@ -23,7 +23,7 @@
 1. **Live Monitoring Mode**  
    - Launch the application with **Administrator privileges** (mandatory for managing kernel ETW sessions).
    - Select the **Live** mode option and click **"Start Live"**.
-   - The engine will dynamically show live ETW events into the diagnostic dashboard.
+   - The engine will dynamically stream live ETW events into the diagnostic dashboard.
 
 2. **ETL Log Parsing Mode**  
    - Select the **From ETL** mode and click **"Open ETL"**.
@@ -52,7 +52,7 @@ ETW produces many events, especially high-frequency ones like `ThreadStart/Stop`
 
 ## 📌 Roadmap
 - [ ] **Advanced Provider Integration**: Expand telemetry sources to include CLR GC activities, Network I/O, and CPU Kernel Sampling.
-- [ ] **Automated Report Generation**: Dump filtered telemetry metrics into structured formats (CSV/JSON) for offline offline analysis.
+- [ ] **Automated Report Generation**: Dump filtered telemetry metrics into structured formats (CSV/JSON) for offline analysis.
 - [ ] **Advanced UI Virtualization**: Transition dashboard rendering to full Virtualizing StackPanels to support continuous, infinite log streaming.
 - [ ] **Telemetry Filtering (Target PID)**: Not yet implemented. Idea: let users scope monitoring down to a specific Target PID to reduce data bloat and processing overhead.
 
